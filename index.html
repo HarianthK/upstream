@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Upstream</title>
+<meta name="description" content="Every pull request a GitHub user has sent to somebody else's project, and what became of it." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230b0f14'/%3E%3Cpath d='M8 13V4M4 8l4-4 4 4' stroke='%2358a6ff' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --accent: #58a6ff; --merged: #a371f7; --open: #3fb950; --closed: #f85149;
+    --muted: #8b9199; --ink: #f4f1ec; --ground: #0b0f14; --panel: #12171d; --edge: rgb(255 255 255 / 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--ground); color: var(--ink);
+    font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 28px 16px 48px;
+  }
+  h1 { margin: 0; font-size: 1rem; font-weight: 600; }
+  h1 span { color: var(--accent); }
+  p.lede { margin: 0; max-width: 56ch; text-align: center; color: var(--muted); font-size: 0.8rem; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  form { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  input {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--edge); border-radius: 8px;
+    padding: 8px 10px; font: inherit; min-width: 16ch;
+  }
+  input:focus { outline: 1px solid var(--accent); }
+  button {
+    background: var(--accent); color: #0b0f14; border: 0; border-radius: 8px; padding: 8px 14px;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  details.token { font-size: 0.8rem; color: var(--muted); max-width: 56ch; text-align: center; }
+  details.token input { width: 100%; margin-top: 6px; }
+
+  .status { color: var(--muted); font-size: 0.85rem; min-height: 1.5em; text-align: center; max-width: 60ch; }
+  .status.bad { color: var(--closed); }
+
+  .totals { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .totals div { background: var(--panel); border: 1px solid var(--edge); border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 7ch; }
+  .totals b { display: block; font-size: 1.3rem; }
+  .totals small { color: var(--muted); }
+
+  .list { width: min(100%, 900px); display: grid; gap: 10px; }
+  .repo { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 10px 12px; }
+  .repo h2 { margin: 0 0 6px; font-size: 0.95rem; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .repo h2 small { color: var(--muted); font-weight: 400; }
+  .pr { display: grid; grid-template-columns: 5.5em 1fr auto; gap: 8px; align-items: baseline; padding: 4px 0; border-top: 1px solid var(--edge); }
+  .pr:first-of-type { border-top: 0; }
+  .pr .state { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+  .pr .state.merged { color: var(--merged); }
+  .pr .state.open { color: var(--open); }
+  .pr .state.closed { color: var(--closed); }
+  .pr .when { color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+  .pr .title { color: var(--ink); }
+  .pr .title:hover { color: var(--accent); }
+  .pr .note { grid-column: 2 / span 2; color: var(--muted); font-size: 0.8rem; }
+  @media (max-width: 560px) { .pr { grid-template-columns: 5em 1fr; } .pr .when { grid-column: 2; } .pr .note { grid-column: 2; } }
+
+  footer { color: var(--muted); font-size: 0.75rem; text-align: center; max-width: 60ch; }
+</style>
+</head>
+<body>
+<h1><span>Upstream</span></h1>
+<p class="lede">Every pull request a GitHub user has sent to somebody else's project, and what became of it. Type a username; the address bar becomes a link you can share.</p>
+
+<form id="form">
+  <input id="user" name="user" placeholder="github username" autocomplete="off" spellcheck="false" required />
+  <button id="go" type="submit">Look up</button>
+</form>
+<details class="token">
+  <summary>Slow, or asked to wait? Add a token.</summary>
+  GitHub allows ten unsigned searches a minute and sixty plain requests an hour. A
+  <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">fine-grained token</a>
+  with no permissions at all lifts both. It stays in this tab and is sent only to api.github.com.
+  <input id="token" type="password" placeholder="github_pat_..." autocomplete="off" />
+</details>
+
+<div class="status" id="status"></div>
+<div class="totals" id="totals" hidden></div>
+<div class="list" id="list"></div>
+
+<footer>Reads the public GitHub API from your browser; nothing is stored anywhere. <a href="https://github.com/HarianthK/upstream">Source</a>.</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>
