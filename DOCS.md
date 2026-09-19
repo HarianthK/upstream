@@ -33,6 +33,18 @@ dragged by one that sat for a year; the median says what usually happens.
 Under a day is shown as "same day" because the search only gives dates to the
 second and rounding a few hours to "0d" reads as nothing.
 
+## The second pass
+
+Three requests per pull request: the pull itself for its size and who merged
+it, its issue comments, and its reviews. Six run at a time, and the page
+renders from the search first so a person sees the list while the pass
+runs, then renders again when it finishes. "Replied" means a person who is
+not the author wrote a comment or a review; accounts GitHub marks as bots
+are skipped, and so is the CLA assistant, which posts from a plain account
+on every first pull request and would otherwise make every one look
+answered. The rate limit with a token is five thousand an hour, so even a
+few hundred pull requests fit in one look-up.
+
 ## Rate limit messages
 
 When GitHub answers 403 or 429 it sends the reset time in a header. The page

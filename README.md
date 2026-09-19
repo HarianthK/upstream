@@ -34,12 +34,21 @@ its newest thousand. A fine-grained token with no permissions at all lifts the
 rate limit; the box for it is on the page, and the token is only ever sent to
 `api.github.com`.
 
+## With a token
+
+Without a token the page uses only the search, because anything more is a
+request per pull request and the unsigned budget is sixty an hour. With a
+token in the box it does a second pass, three requests per pull request, and
+each row gains its size, who merged it, or who has replied (people only;
+bots and the CLA assistant do not count), with "no reply yet" on the open
+ones nobody has touched. The totals gain an "answered" count: pull requests
+a person other than the author has written on or merged. The list is shown
+from the search first and updated when the pass finishes.
+
 ## What it does not know
 
-The search does not say how big a pull request is, whether a maintainer
-replied, or who merged it; each of those is another request per pull request,
-which would burn the unsigned limit in one look-up. The comment count it shows
-includes the author's own comments. Pull requests to repositories inside an
+The comment count in the search includes the author's own comments, which is
+why the token pass reads who actually replied. Pull requests to repositories inside an
 organisation the user belongs to still count as upstream, since the search
 only excludes repositories the user owns outright.
 
@@ -50,6 +59,8 @@ GitHub API refuses `file://` pages.
 
     npx serve .
 
+`node scripts/check.mjs <user>` renders the page in headless Chrome and prints
+what it showed; with `UPSTREAM_TOKEN` set it exercises the detail pass too.
 `node scripts/deploy.mjs` deploys to Vercel and then checks that the live site
 is serving exactly the files in this folder.
 
