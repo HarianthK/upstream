@@ -60,6 +60,41 @@ function describe(pr) {
   return { repo, owner: repo.split("/")[0], title: pr.title, url: pr.html_url, sent, merged, closed, state, note, number: pr.number }
 }
 
+// With a token the budget allows two requests per pull request: its size and
+// who merged it, and whether anyone other than the author has written on it.
+async function enrich(prs, token, user) {
+  const headers = { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}` }
+  const get = async (path) => { const r = await fetch(`https://api.github.com/${path}`, { headers }); return r.ok ? r.json() : null }
+  let done = 0
+  const queue = [...prs]
+  const worker = async () => {
+    for (let p = queue.shift(); p; p = queue.shift()) {
+      const [pull, comments, reviews] = await Promise.all([
+        get(`repos/${p.repo}/pulls/${p.number}`),
+        get(`repos/${p.repo}/issues/${p.number}/comments?per_page=100`),
+        get(`repos/${p.repo}/pulls/${p.number}/reviews?per_page=100`),
+      ])
+      if (pull) { p.size = `+${pull.additions} -${pull.deletions}`; p.mergedBy = pull.merged_by?.login ?? null }
+      // Bots do not count as a reply; the CLA one has a plain user account, so it is named.
+      const isBot = (c) => c.user?.type === "Bot" || /\[bot\]$|^CLAassistant$/i.test(c.user?.login ?? "")
+      const voices = [...(comments || []), ...(reviews || [])].filter((c) => !isBot(c)).map((c) => c.user?.login).filter((l) => l && l !== user)
+      p.answered = voices.length > 0
+      p.voices = [...new Set(voices)]
+      say(`${++done} of ${prs.length} pull requests read in detail`)
+    }
+  }
+  await Promise.all(Array.from({ length: 6 }, worker))
+}
+
+function fullNote(p) {
+  const bits = [p.note]
+  if (p.size) bits.push(p.size)
+  if (p.mergedBy) bits.push(`by ${p.mergedBy}`)
+  else if (p.answered) bits.push(`${p.voices.slice(0, 2).join(" and ")} replied`)
+  else if (p.answered === false && p.state === "open") bits.push("no reply yet")
+  return bits.join(", ")
+}
+
 function median(values) {
   if (!values.length) return null
   const s = [...values].sort((a, b) => a - b)
@@ -95,6 +130,7 @@ function render(user, prs) {
   ]
   const med = median(mergedDays)
   if (med !== null) cards.push([med < 1 ? "same day" : `${Math.round(med)}d`, "median merge"])
+  if (prs.some((p) => p.answered !== undefined)) cards.push([prs.filter((p) => p.answered || p.mergedBy).length, "answered"])
   totals.replaceChildren(...cards.map(([n, label]) => el("div", {}, el("b", { text: String(n) }), el("small", { text: label }))))
   totals.hidden = false
 
@@ -108,7 +144,7 @@ function render(user, prs) {
       el("span", { class: `state ${p.state}`, text: p.state }),
       el("a", { class: "title", href: p.url, target: "_blank", rel: "noopener", text: `#${p.number} ${p.title}` }),
       el("span", { class: "when", text: p.sent.toISOString().slice(0, 10) }),
-      el("span", { class: "note", text: p.note }),
+      el("span", { class: "note", text: fullNote(p) }),
     ))
     return el("section", { class: "repo" }, head, ...rows)
   }))
@@ -123,10 +159,17 @@ async function lookup(user) {
   list.replaceChildren()
   say("asking GitHub")
   try {
-    const items = await fetchAll(user, tokenBox.value.trim())
-    render(user, items.map(describe))
+    const token = tokenBox.value.trim()
+    const prs = (await fetchAll(user, token)).map(describe)
+    render(user, prs)
     history.replaceState(null, "", `?user=${encodeURIComponent(user)}`)
     document.title = `Upstream: ${user}`
+    if (token && prs.length) {
+      const summary = status.textContent
+      await enrich(prs, token, user)
+      render(user, prs)
+      say(summary)
+    }
   } catch (err) {
     say(err.message, true)
   } finally {
