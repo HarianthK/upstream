@@ -9,7 +9,7 @@
 <style>
   :root {
     color-scheme: dark;
-    --accent: #58a6ff; --merged: #a371f7; --open: #3fb950; --closed: #f85149;
+    --accent: #58a6ff; --merged: #a371f7; --open: #3fb950; --closed: #f85149; --stale: #d29922;
     --muted: #8b9199; --ink: #f4f1ec; --ground: #0b0f14; --panel: #12171d; --edge: rgb(255 255 255 / 0.08);
   }
   * { box-sizing: border-box; }
@@ -60,6 +60,7 @@
   .pr .title { color: var(--ink); }
   .pr .title:hover { color: var(--accent); }
   .pr .note { grid-column: 2 / span 2; color: var(--muted); font-size: 0.8rem; }
+  .pr.stale .note { color: var(--stale); }
   @media (max-width: 560px) { .pr { grid-template-columns: 5em 1fr; } .pr .when { grid-column: 2; } .pr .note { grid-column: 2; } }
 
   footer { color: var(--muted); font-size: 0.75rem; text-align: center; max-width: 60ch; }

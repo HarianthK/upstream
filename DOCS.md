@@ -59,3 +59,20 @@ username, and prints what was rendered: the status line, the totals and the
 first rows. It was run on my own account and compared line by line against
 the ledger I kept by hand, on a busier account with closed pull requests, and
 on a name that does not exist. The page is only as right as those three runs.
+
+## Stale, and why it needs two clocks
+
+The search result carries `updated_at`, the last time anything happened to a
+pull request. That is free, so without a token it is the clock: two weeks with
+no activity at all and an open pull request is marked stale. But it moves for
+the author too. Nudging three quiet pull requests the day this was written
+reset all three, and the page showed them as freshly active when each had been
+waiting on a maintainer for over two weeks.
+
+The token pass already reads every comment and review, so there the clock is
+the last thing written by anyone other than the author and not a bot, or the
+day the pull request was opened if nobody has. On my own account that is the
+difference between 18 stale and 20: the two that only the token pass can see
+are exactly the ones I had nudged. Forcing the token pass back onto the
+activity date drops the count to 18 again, which is how the check knows the
+second clock is the one in use.

@@ -11,6 +11,8 @@ const list = document.getElementById("list")
 const API = "https://api.github.com/search/issues"
 const PAGE = 100
 const DAY = 86400000
+// An open pull request nobody has moved for this long is marked stale.
+const STALE_DAYS = 14
 
 function say(text, bad = false) {
   status.textContent = text
@@ -57,7 +59,9 @@ function describe(pr) {
   else if (closed) note = `closed without merging after ${days(sent, closed)} days`
   else note = `open for ${days(sent, Date.now())} days, ${pr.comments} ${pr.comments === 1 ? "comment" : "comments"}`
   if (pr.draft) note = `draft, ${note}`
-  return { repo, owner: repo.split("/")[0], title: pr.title, url: pr.html_url, sent, merged, closed, state, note, number: pr.number }
+  // Without a token the only clock is the last activity of any kind, the author's own included.
+  const quiet = state === "open" ? days(new Date(pr.updated_at), Date.now()) : 0
+  return { repo, owner: repo.split("/")[0], title: pr.title, url: pr.html_url, sent, merged, closed, state, note, number: pr.number, quiet, stale: quiet >= STALE_DAYS }
 }
 
 // With a token the budget allows two requests per pull request: its size and
@@ -77,9 +81,17 @@ async function enrich(prs, token, user) {
       if (pull) { p.size = `+${pull.additions} -${pull.deletions}`; p.mergedBy = pull.merged_by?.login ?? null }
       // Bots do not count as a reply; the CLA one has a plain user account, so it is named.
       const isBot = (c) => c.user?.type === "Bot" || /\[bot\]$|^CLAassistant$/i.test(c.user?.login ?? "")
-      const voices = [...(comments || []), ...(reviews || [])].filter((c) => !isBot(c)).map((c) => c.user?.login).filter((l) => l && l !== user)
+      const others = [...(comments || []), ...(reviews || [])].filter((c) => !isBot(c) && c.user?.login && c.user.login !== user)
+      const voices = others.map((c) => c.user.login)
       p.answered = voices.length > 0
       p.voices = [...new Set(voices)]
+      // With the comments in hand, stale means nobody but the author has written for a while:
+      // an author's own nudge resets the activity date but is not an answer.
+      if (p.state === "open") {
+        const last = Math.max(p.sent.getTime(), ...others.map((c) => Date.parse(c.created_at ?? c.submitted_at)))
+        p.waiting = Math.max(0, Math.round((Date.now() - last) / DAY))
+        p.stale = p.waiting >= STALE_DAYS
+      }
       say(`${++done} of ${prs.length} pull requests read in detail`)
     }
   }
@@ -92,6 +104,8 @@ function fullNote(p) {
   if (p.mergedBy) bits.push(`by ${p.mergedBy}`)
   else if (p.answered) bits.push(`${p.voices.slice(0, 2).join(" and ")} replied`)
   else if (p.answered === false && p.state === "open") bits.push("no reply yet")
+  if (p.stale && p.waiting !== undefined) bits.push(`stale: nobody else has written in ${p.waiting} days`)
+  else if (p.stale) bits.push(`stale: quiet for ${p.quiet} days`)
   return bits.join(", ")
 }
 
@@ -124,6 +138,7 @@ function render(user, prs) {
     [prs.length, "sent"],
     [count("merged"), "merged"],
     [count("open"), "open"],
+    [prs.filter((p) => p.stale).length, "stale"],
     [count("closed"), "closed"],
     [byRepo.size, byRepo.size === 1 ? "project" : "projects"],
     [new Set(prs.map((p) => p.owner)).size, "maintainers"],
@@ -140,7 +155,7 @@ function render(user, prs) {
     const merged = items.filter((p) => p.state === "merged").length
     const summary = `${items.length} sent, ${merged} merged`
     const head = el("h2", {}, el("a", { href: `https://github.com/${repo}`, target: "_blank", rel: "noopener", text: repo }), el("small", { text: summary }))
-    const rows = items.map((p) => el("div", { class: "pr" },
+    const rows = items.map((p) => el("div", { class: p.stale ? "pr stale" : "pr" },
       el("span", { class: `state ${p.state}`, text: p.state }),
       el("a", { class: "title", href: p.url, target: "_blank", rel: "noopener", text: `#${p.number} ${p.title}` }),
       el("span", { class: "when", text: p.sent.toISOString().slice(0, 10) }),
