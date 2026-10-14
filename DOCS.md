@@ -60,6 +60,19 @@ first rows. It was run on my own account and compared line by line against
 the ledger I kept by hand, on a busier account with closed pull requests, and
 on a name that does not exist. The page is only as right as those three runs.
 
+Those runs have one blind spot: they can only see what my pull requests happen
+to look like that day. So the check gained a fixture mode. It replaces the
+page's `fetch` with one that answers from four canned pull requests whose
+dates are counted back from now, so they never age, and `--expect` and
+`--reject` turn the printout into a pass or a fail.
+
+The first thing it caught was a real bug. GitHub logins ignore case, but the
+detail pass compared the typed name with each commenter exactly, so looking up
+`harianthk` counted HarianthK's own comments as replies from somebody else:
+rows said "HarianthK replied", and an author's own nudge reset the stale clock,
+which is the one thing the comment-reading clock exists to prevent. Typed in
+lower case, the fixture's twenty-days-quiet pull request came out not stale.
+
 ## Stale, and why it needs two clocks
 
 The search result carries `updated_at`, the last time anything happened to a

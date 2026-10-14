@@ -70,6 +70,9 @@ GitHub API refuses `file://` pages.
 
 `node scripts/check.mjs <user>` renders the page in headless Chrome and prints
 what it showed; with `UPSTREAM_TOKEN` set it exercises the detail pass too.
+`--fixture` answers from `scripts/fixtures/api.js` instead of GitHub, and
+`--expect` and `--reject` make it fail unless a row does, or does not, say
+something, so the detail pass can be checked without a token or a network.
 `node scripts/deploy.mjs` deploys to Vercel and then checks that the live site
 is serving exactly the files in this folder.
 

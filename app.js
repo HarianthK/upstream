@@ -81,7 +81,9 @@ async function enrich(prs, token, user) {
       if (pull) { p.size = `+${pull.additions} -${pull.deletions}`; p.mergedBy = pull.merged_by?.login ?? null }
       // Bots do not count as a reply; the CLA one has a plain user account, so it is named.
       const isBot = (c) => c.user?.type === "Bot" || /\[bot\]$|^CLAassistant$/i.test(c.user?.login ?? "")
-      const others = [...(comments || []), ...(reviews || [])].filter((c) => !isBot(c) && c.user?.login && c.user.login !== user)
+      // GitHub logins ignore case, so "harianthk" typed in the box is still the author HarianthK.
+      const isAuthor = (c) => c.user.login.toLowerCase() === user.toLowerCase()
+      const others = [...(comments || []), ...(reviews || [])].filter((c) => !isBot(c) && c.user?.login && !isAuthor(c))
       const voices = others.map((c) => c.user.login)
       p.answered = voices.length > 0
       p.voices = [...new Set(voices)]
