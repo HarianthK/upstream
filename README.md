@@ -45,6 +45,11 @@ ones nobody has touched. The totals gain an "answered" count: pull requests
 a person other than the author has written on or merged. The list is shown
 from the search first and updated when the pass finishes.
 
+An open pull request where somebody else wrote after the author last did is
+marked "your turn", with who it was and when, and counted at the top. That is
+the one that needs you: a maintainer asking a question or a reviewer asking for
+a change. It is never also marked stale, since the wait is on you, not them.
+
 ## Stale
 
 An open pull request that nobody has moved for two weeks is marked stale, in

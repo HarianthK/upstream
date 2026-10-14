@@ -90,9 +90,15 @@ async function enrich(prs, token, user) {
       // With the comments in hand, stale means nobody but the author has written for a while:
       // an author's own nudge resets the activity date but is not an answer.
       if (p.state === "open") {
-        const last = Math.max(p.sent.getTime(), ...others.map((c) => Date.parse(c.created_at ?? c.submitted_at)))
+        const at = (c) => Date.parse(c.created_at ?? c.submitted_at)
+        const last = Math.max(p.sent.getTime(), ...others.map(at))
         p.waiting = Math.max(0, Math.round((Date.now() - last) / DAY))
-        p.stale = p.waiting >= STALE_DAYS
+        // Your turn: somebody else wrote after the author last did. Then the wait is on the
+        // author, so it is not stale, however long ago that was.
+        const mine = Math.max(p.sent.getTime(), ...[...(comments || []), ...(reviews || [])].filter((c) => c.user?.login && isAuthor(c)).map(at))
+        const newest = others.reduce((a, c) => (!a || at(c) > at(a) ? c : a), null)
+        p.turn = newest && at(newest) > mine ? newest.user.login : null
+        p.stale = !p.turn && p.waiting >= STALE_DAYS
       }
       say(`${++done} of ${prs.length} pull requests read in detail`)
     }
@@ -106,6 +112,7 @@ function fullNote(p) {
   if (p.mergedBy) bits.push(`by ${p.mergedBy}`)
   else if (p.answered) bits.push(`${p.voices.slice(0, 2).join(" and ")} replied`)
   else if (p.answered === false && p.state === "open") bits.push("no reply yet")
+  if (p.turn) bits.push(`your turn: ${p.turn} wrote ${p.waiting === 0 ? "today" : p.waiting === 1 ? "yesterday" : `${p.waiting} days ago`}`)
   if (p.stale && p.waiting !== undefined) bits.push(`stale: nobody else has written in ${p.waiting} days`)
   else if (p.stale) bits.push(`stale: quiet for ${p.quiet} days`)
   return bits.join(", ")
@@ -141,6 +148,7 @@ function render(user, prs) {
     [count("merged"), "merged"],
     [count("open"), "open"],
     [prs.filter((p) => p.stale).length, "stale"],
+    ...(prs.some((p) => p.turn) ? [[prs.filter((p) => p.turn).length, "your turn"]] : []),
     [count("closed"), "closed"],
     [byRepo.size, byRepo.size === 1 ? "project" : "projects"],
     [new Set(prs.map((p) => p.owner)).size, "maintainers"],
@@ -157,7 +165,7 @@ function render(user, prs) {
     const merged = items.filter((p) => p.state === "merged").length
     const summary = `${items.length} sent, ${merged} merged`
     const head = el("h2", {}, el("a", { href: `https://github.com/${repo}`, target: "_blank", rel: "noopener", text: repo }), el("small", { text: summary }))
-    const rows = items.map((p) => el("div", { class: p.stale ? "pr stale" : "pr" },
+    const rows = items.map((p) => el("div", { class: p.turn ? "pr turn" : p.stale ? "pr stale" : "pr" },
       el("span", { class: `state ${p.state}`, text: p.state }),
       el("a", { class: "title", href: p.url, target: "_blank", rel: "noopener", text: `#${p.number} ${p.title}` }),
       el("span", { class: "when", text: p.sent.toISOString().slice(0, 10) }),

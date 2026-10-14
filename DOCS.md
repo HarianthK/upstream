@@ -89,3 +89,24 @@ difference between 18 stale and 20: the two that only the token pass can see
 are exactly the ones I had nudged. Forcing the token pass back onto the
 activity date drops the count to 18 again, which is how the check knows the
 second clock is the one in use.
+
+## Your turn
+
+Stale answers "who has gone quiet on me". The other question a list of open
+pull requests should answer is "who is waiting on me", and with the comments
+already fetched it costs nothing: an open pull request is your turn when the
+newest comment or review by anybody but the author is newer than the author's
+own last word, the opening of the pull request counting as one.
+
+It came from a real miss. A maintainer asked on one of my pull requests whether
+I was still interested, and the page showed that row exactly as it showed the
+silent ones. Now it reads "your turn: mikeldking wrote yesterday" in the accent
+colour, and the totals count how many are waiting. A your-turn row is never
+stale too: if a maintainer asked something twenty days ago and I never
+answered, calling that row stale would blame them for my silence.
+
+The fixture has one of each: a reply after mine, a nudge of mine after a reply,
+a maintainer's question left unanswered for twenty five days, no replies at all,
+and a merge. Never marking your turn, letting a your-turn row be stale, and
+matching the author's name by exact case each fail the check.
+
