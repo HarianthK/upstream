@@ -1,5 +1,5 @@
-// Asks GitHub's search for a user's pull requests outside their own repositories,
-// then groups them by project. See DOCS.md for what the search can and cannot say.
+// Asks GitHub's search for a user's pull requests and issues outside their own repositories,
+// then groups the pull requests by project. See DOCS.md for what the search can and cannot say.
 const form = document.getElementById("form")
 const userBox = document.getElementById("user")
 const tokenBox = document.getElementById("token")
@@ -19,8 +19,8 @@ function say(text, bad = false) {
   status.classList.toggle("bad", bad)
 }
 
-async function page(user, n, token) {
-  const q = `author:${user} type:pr -user:${user}`
+async function page(user, n, token, type) {
+  const q = `author:${user} type:${type} -user:${user}`
   const url = `${API}?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=${PAGE}&page=${n}`
   const headers = { Accept: "application/vnd.github+json" }
   if (token) headers.Authorization = `Bearer ${token}`
@@ -36,12 +36,12 @@ async function page(user, n, token) {
 }
 
 // The search stops at a thousand results; nobody sends more upstream than that.
-async function fetchAll(user, token) {
+async function fetchAll(user, token, type = "pr") {
   const items = []
   for (let n = 1; n <= 10; n++) {
-    const data = await page(user, n, token)
+    const data = await page(user, n, token, type)
     items.push(...data.items)
-    say(`${items.length} of ${data.total_count} pull requests read`)
+    say(`${items.length} of ${data.total_count} ${type === "pr" ? "pull requests" : "issues"} read`)
     if (items.length >= data.total_count || data.items.length < PAGE) break
   }
   return items
@@ -62,6 +62,20 @@ function describe(pr) {
   // Without a token the only clock is the last activity of any kind, the author's own included.
   const quiet = state === "open" ? days(new Date(pr.updated_at), Date.now()) : 0
   return { repo, owner: repo.split("/")[0], title: pr.title, url: pr.html_url, sent, merged, closed, state, note, number: pr.number, quiet, stale: quiet >= STALE_DAYS }
+}
+
+// An issue is fixed or turned down only as far as GitHub's close reason says.
+function describeIssue(issue) {
+  const repo = issue.repository_url.replace("https://api.github.com/repos/", "")
+  const sent = new Date(issue.created_at), closed = issue.closed_at ? new Date(issue.closed_at) : null
+  const days = (a, b) => Math.max(0, Math.round((b - a) / DAY))
+  const comments = `${issue.comments} ${issue.comments === 1 ? "comment" : "comments"}`
+  let note
+  if (!closed) note = `open for ${days(sent, Date.now())} days, ${comments}`
+  else if (issue.state_reason === "not_planned") note = `closed as not planned after ${days(sent, closed)} days, ${comments}`
+  else if (issue.state_reason === "duplicate") note = `closed as a duplicate after ${days(sent, closed)} days`
+  else note = `closed as completed after ${days(sent, closed)} days, ${comments}`
+  return { repo, title: issue.title, url: issue.html_url, number: issue.number, sent, state: closed ? "closed" : "open", note }
 }
 
 // With a token the budget allows two requests per pull request: its size and
@@ -135,7 +149,7 @@ function el(tag, attrs = {}, ...children) {
   return node
 }
 
-function render(user, prs) {
+function render(user, prs, issues) {
   const byRepo = new Map()
   for (const pr of prs) {
     if (!byRepo.has(pr.repo)) byRepo.set(pr.repo, [])
@@ -173,7 +187,19 @@ function render(user, prs) {
     ))
     return el("section", { class: "repo" }, head, ...rows)
   }))
-  say(prs.length ? `${user} has sent ${prs.length} pull requests to ${byRepo.size} ${byRepo.size === 1 ? "project" : "projects"} they do not own.` : `${user} has not sent any pull requests to other people's projects.`)
+  if (issues.length) {
+    const open = issues.filter((i) => i.state === "open").length
+    const head = el("h2", {}, el("span", { text: "Issues opened" }), el("small", { text: `${issues.length} opened, ${open} open` }))
+    const rows = issues.map((i) => el("div", { class: "pr issue" },
+      el("span", { class: `state ${i.state}`, text: i.state }),
+      el("a", { class: "title", href: i.url, target: "_blank", rel: "noopener", text: `${i.repo}#${i.number} ${i.title}` }),
+      el("span", { class: "when", text: i.sent.toISOString().slice(0, 10) }),
+      el("span", { class: "note", text: i.note }),
+    ))
+    list.append(el("section", { class: "repo issues" }, head, ...rows))
+  }
+  const opened = issues.length ? ` and opened ${issues.length} ${issues.length === 1 ? "issue" : "issues"}` : ""
+  say(prs.length ? `${user} has sent ${prs.length} pull requests to ${byRepo.size} ${byRepo.size === 1 ? "project" : "projects"} they do not own${opened}.` : `${user} has not sent any pull requests to other people's projects${opened}.`)
 }
 
 async function lookup(user) {
@@ -186,13 +212,14 @@ async function lookup(user) {
   try {
     const token = tokenBox.value.trim()
     const prs = (await fetchAll(user, token)).map(describe)
-    render(user, prs)
+    const issues = (await fetchAll(user, token, "issue")).map(describeIssue)
+    render(user, prs, issues)
     history.replaceState(null, "", `?user=${encodeURIComponent(user)}`)
     document.title = `Upstream: ${user}`
     if (token && prs.length) {
       const summary = status.textContent
       await enrich(prs, token, user)
-      render(user, prs)
+      render(user, prs, issues)
       say(summary)
     }
   } catch (err) {

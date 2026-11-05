@@ -110,3 +110,23 @@ a maintainer's question left unanswered for twenty five days, no replies at all,
 and a merge. Never marking your turn, letting a your-turn row be stale, and
 matching the author's name by exact case each fail the check.
 
+## Issues, from the close reason
+
+The ledger this page replaced had a second table, the issues I had opened, and
+the page had no way to show them. It is the same search with `type:issue`, so it
+costs one more unsigned request, two for someone with more than a hundred.
+
+Whether an issue was fixed is GitHub's `state_reason`: `completed`,
+`not_planned` or `duplicate`, given in the search result itself, so no
+per-issue request. An old issue closed before GitHub had reasons comes back
+with none and reads as completed, which is what closing meant then. The page
+does not try to find the pull request that fixed it; GitHub's timeline knows,
+but that is a request per issue, and "closed as completed" already answers the
+question.
+
+The fake fetch in `check.mjs` now answers the issue search from its own list:
+one open, one completed, one not planned. Four breakages each fail the check:
+the search always asking for pull requests, not planned read as completed, the
+days counted up to now instead of to the close, and the second render after the
+token pass dropping the issues. Live, the page shows the same two issues the
+raw search returns for HarianthK.

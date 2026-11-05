@@ -31,7 +31,8 @@ function fakeFetch(data) {
   window.fetch = async (url) => {
     const json = (body) => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => body })
     const path = new URL(url).pathname
-    if (path === "/search/issues") return json({ total_count: data.search.length, items: data.search })
+    const found = new URL(url).searchParams.get("q")?.includes("type:issue") ? data.issues : data.search
+    if (path === "/search/issues") return json({ total_count: found.length, items: found })
     const [, repo, number, part] = path.match(/^\/repos\/([^/]+\/[^/]+)\/(?:pulls|issues)\/(\d+)(?:\/(\w+))?$/)
     const pr = data[`${repo}/${number}`]
     return json(part === "comments" ? pr.comments : part === "reviews" ? [] : pr.pull)

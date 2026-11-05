@@ -59,6 +59,14 @@ request look fresh. With a token the clock is the last time anyone other than
 the author wrote on it, which is the question that matters: is it waiting on
 them?
 
+## Issues
+
+Under the projects, the issues the user has opened in repositories they do not
+own, from a second search of the same kind, `type:issue` instead of `type:pr`.
+Each says whether it is still open or how it was closed, as completed, as not
+planned or as a duplicate, and after how many days. Many projects want an issue
+before a pull request, so the issue is half of the record.
+
 ## What it does not know
 
 The comment count in the search includes the author's own comments, which is

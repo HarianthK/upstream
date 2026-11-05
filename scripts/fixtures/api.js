@@ -6,9 +6,18 @@ const pr = (repo, number, title, sent, extra = {}) => ({
   number, title, state: "open", draft: false, comments: 0, created_at: sent, updated_at: sent, closed_at: null,
   pull_request: { merged_at: null }, ...extra,
 })
+const issue = (repo, number, title, sent, extra = {}) => ({
+  repository_url: `https://api.github.com/repos/${repo}`, html_url: `https://github.com/${repo}/issues/${number}`,
+  number, title, state: "open", state_reason: null, comments: 0, created_at: sent, closed_at: null, ...extra,
+})
 const said = (login, ago) => ({ user: { login, type: "User" }, created_at: ago })
 
 export const fixture = (ago) => ({
+  issues: [
+    issue("owner/alpha", 6, "Alpha crashes", ago(9), { comments: 1 }),
+    issue("owner/beta", 7, "Beta is slow", ago(20), { state: "closed", state_reason: "completed", closed_at: ago(15), comments: 3 }),
+    issue("owner/gamma", 8, "Gamma could do more", ago(12), { state: "closed", state_reason: "not_planned", closed_at: ago(10), comments: 1 }),
+  ],
   search: [
     pr("owner/alpha", 1, "Alpha fix", ago(30), { comments: 2, updated_at: ago(10) }),
     pr("owner/beta", 2, "Beta fix", ago(30), { comments: 2, updated_at: ago(5) }),
