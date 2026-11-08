@@ -7,6 +7,9 @@ const go = document.getElementById("go")
 const status = document.getElementById("status")
 const totals = document.getElementById("totals")
 const list = document.getElementById("list")
+const copy = document.getElementById("copy")
+// The last result as markdown, kept for the copy button.
+let ledger = ""
 
 const API = "https://api.github.com/search/issues"
 const PAGE = 100
@@ -132,6 +135,22 @@ function fullNote(p) {
   return bits.join(", ")
 }
 
+// The page as the markdown ledger it replaced: one table per project, then the issues.
+function markdown(user, prs, issues) {
+  const cell = (s) => s.replace(/\|/g, "\\|")
+  const day = (d) => d.toISOString().slice(0, 10)
+  const merged = prs.filter((p) => p.state === "merged").length
+  const repos = [...new Set(prs.map((p) => p.repo))]
+  const lines = [`# Upstream: ${user}`, "", `${prs.length} pull requests sent to ${repos.length} projects, ${merged} merged, as of ${day(new Date())}.`]
+  const table = (head, what, rows) => ["", head, `| Sent | State | ${what} | Note |`, "| --- | --- | --- | --- |", ...rows]
+  for (const repo of repos) {
+    const items = prs.filter((p) => p.repo === repo)
+    lines.push(...table(`## ${repo}`, "Pull request", items.map((p) => `| ${day(p.sent)} | ${p.state} | [#${p.number} ${cell(p.title)}](${p.url}) | ${cell(fullNote(p))} |`)))
+  }
+  if (issues.length) lines.push(...table("## Issues opened", "Issue", issues.map((i) => `| ${day(i.sent)} | ${i.state} | [${i.repo}#${i.number} ${cell(i.title)}](${i.url}) | ${cell(i.note)} |`)))
+  return lines.join("\n") + "\n"
+}
+
 function median(values) {
   if (!values.length) return null
   const s = [...values].sort((a, b) => a - b)
@@ -198,6 +217,8 @@ function render(user, prs, issues) {
     ))
     list.append(el("section", { class: "repo issues" }, head, ...rows))
   }
+  ledger = markdown(user, prs, issues)
+  copy.hidden = !prs.length && !issues.length
   const opened = issues.length ? ` and opened ${issues.length} ${issues.length === 1 ? "issue" : "issues"}` : ""
   say(prs.length ? `${user} has sent ${prs.length} pull requests to ${byRepo.size} ${byRepo.size === 1 ? "project" : "projects"} they do not own${opened}.` : `${user} has not sent any pull requests to other people's projects${opened}.`)
 }
@@ -207,6 +228,7 @@ async function lookup(user) {
   if (!user) return
   go.disabled = true
   totals.hidden = true
+  copy.hidden = true
   list.replaceChildren()
   say("asking GitHub")
   try {
@@ -228,6 +250,19 @@ async function lookup(user) {
     go.disabled = false
   }
 }
+
+// Copied when the browser allows it, otherwise saved as a file.
+copy.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(ledger)
+    copy.textContent = "Copied"
+  } catch {
+    const a = el("a", { href: URL.createObjectURL(new Blob([ledger], { type: "text/markdown" })), download: "upstream.md" })
+    a.click()
+    copy.textContent = "Saved upstream.md"
+  }
+  setTimeout(() => { copy.textContent = "Copy as Markdown" }, 2000)
+})
 
 form.addEventListener("submit", (event) => {
   event.preventDefault()

@@ -67,6 +67,15 @@ Each says whether it is still open or how it was closed, as completed, as not
 planned or as a duplicate, and after how many days. Many projects want an issue
 before a pull request, so the issue is half of the record.
 
+## As markdown
+
+"Copy as Markdown", under the totals, puts the whole result on the clipboard as
+the markdown file this page replaced: a line of totals with the date, then a
+table per project with each pull request's date, state, link and the same note
+the page shows, then the issues. Paste it into a repository and the record is
+kept with no page needed. Where the browser will not allow the clipboard, it
+saves `upstream.md` instead.
+
 ## What it does not know
 
 The comment count in the search includes the author's own comments, which is
@@ -85,7 +94,8 @@ GitHub API refuses `file://` pages.
 what it showed; with `UPSTREAM_TOKEN` set it exercises the detail pass too.
 `--fixture` answers from `scripts/fixtures/api.js` instead of GitHub, and
 `--expect` and `--reject` make it fail unless a row does, or does not, say
-something, so the detail pass can be checked without a token or a network.
+something, `--markdown LINE` fails unless the copied markdown has that exact
+line (`{d:N}` stands for the date N days ago), so the detail pass can be checked without a token or a network.
 `node scripts/deploy.mjs` deploys to Vercel and then checks that the live site
 is serving exactly the files in this folder.
 

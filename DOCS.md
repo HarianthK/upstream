@@ -130,3 +130,15 @@ the search always asking for pull requests, not planned read as completed, the
 days counted up to now instead of to the close, and the second render after the
 token pass dropping the issues. Live, the page shows the same two issues the
 raw search returns for HarianthK.
+
+## Markdown, the way it started
+
+The page began as a markdown ledger kept by hand, so it can give one back. The
+export reuses the page's own note for each row, so the two can never say
+different things, and escapes any pipe in a title, which would otherwise end
+the table cell early. The check stands in for the clipboard, presses the real
+button, and holds the copy to lines written out by hand from the fixture, with
+dates given as days ago because the fixture's dates move with the clock. The
+fixture gained an issue with a pipe in its title for that reason. Eight
+breakages, from leaving pipes alone to copying the page title instead of the
+ledger, each fail it.

@@ -35,6 +35,7 @@
     font: inherit; font-weight: 600; cursor: pointer;
   }
   button:disabled { opacity: 0.5; cursor: wait; }
+  .copy { background: none; border: 1px solid var(--edge); color: var(--muted); }
   details.token { font-size: 0.8rem; color: var(--muted); max-width: 56ch; text-align: center; }
   details.token input { width: 100%; margin-top: 6px; }
 
@@ -87,6 +88,7 @@
 
 <div class="status" id="status"></div>
 <div class="totals" id="totals" hidden></div>
+<button id="copy" class="copy" type="button" hidden>Copy as Markdown</button>
 <div class="list" id="list"></div>
 
 <footer>Reads the public GitHub API from your browser; nothing is stored anywhere. <a href="https://github.com/HarianthK/upstream">Source</a>.</footer>

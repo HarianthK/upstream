@@ -17,7 +17,7 @@ const CHROME = "C:/Users/HARIANTH/AppData/Local/ms-playwright/chromium_headless_
 const args = process.argv.slice(2)
 const flagged = (flag) => args.flatMap((a, i) => (a === flag ? [args[i + 1]] : []))
 const fixtureMode = args.includes("--fixture")
-const user = args.find((a, i) => !a.startsWith("--") && !["--expect", "--reject"].includes(args[i - 1])) || "HarianthK"
+const user = args.find((a, i) => !a.startsWith("--") && !["--expect", "--reject", "--markdown"].includes(args[i - 1])) || "HarianthK"
 const token = fixtureMode ? "fixture" : process.env.UPSTREAM_TOKEN
 const chrome = spawn(CHROME, ["--headless", "--disable-gpu", "--remote-debugging-port=9333", token ? "http://localhost:4177/" : `http://localhost:4177/?user=${user}`], { stdio: "ignore" })
 await new Promise((r) => setTimeout(r, 1500))
@@ -56,5 +56,15 @@ const failed = [
   ...flagged("--expect").filter((t) => !out.notes.some((n) => n.includes(t))).map((t) => `no note contains "${t}"`),
   ...flagged("--reject").filter((t) => out.notes.some((n) => n.includes(t))).map((t) => `a note contains "${t}"`),
 ]
+// --markdown LINE: the copied ledger must hold that line; {d:N} is the date N days ago, as in the fixture.
+if (flagged("--markdown").length) {
+  const c = await send("Runtime.evaluate", { expression: `new Promise((done) => { navigator.clipboard.writeText = async (t) => done(t); document.getElementById("copy").click() })`, awaitPromise: true, returnByValue: true })
+  const md = c.result.value ?? ""
+  console.log(md)
+  const day = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10)
+  for (const want of flagged("--markdown").map((t) => t.replace(/\{d:(\d+)\}/g, (_, n) => day(Number(n))))) {
+    if (!md.split("\n").includes(want)) failed.push(`the markdown has no line "${want}"`)
+  }
+}
 for (const f of failed) console.error(`check: ${f}`)
 chrome.kill(); server.close(); process.exit(failed.length ? 1 : 0)

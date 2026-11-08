@@ -17,6 +17,7 @@ export const fixture = (ago) => ({
     issue("owner/alpha", 6, "Alpha crashes", ago(9), { comments: 1 }),
     issue("owner/beta", 7, "Beta is slow", ago(20), { state: "closed", state_reason: "completed", closed_at: ago(15), comments: 3 }),
     issue("owner/gamma", 8, "Gamma could do more", ago(12), { state: "closed", state_reason: "not_planned", closed_at: ago(10), comments: 1 }),
+    issue("owner/zeta", 9, "Fails on a | b", ago(2)),
   ],
   search: [
     pr("owner/alpha", 1, "Alpha fix", ago(30), { comments: 2, updated_at: ago(10) }),
