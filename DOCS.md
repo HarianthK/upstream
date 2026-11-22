@@ -142,3 +142,17 @@ dates given as days ago because the fixture's dates move with the clock. The
 fixture gained an issue with a pipe in its title for that reason. Eight
 breakages, from leaving pipes alone to copying the page title instead of the
 ledger, each fail it.
+
+## A refused request is not an empty thread
+
+With a token, each pull request's comments and reviews are fetched to see who
+replied. A request GitHub refused, during a rate limit for instance, came back
+as `null`, and `null` was read as no comments at all. So a pull request with a
+reply from two days ago showed "no reply yet, stale: nobody else has written in
+20 days", which is false on both counts and is the opposite of what the page is for.
+
+Now, when either request fails, the pull request says "replies could not be
+read" and keeps the plain activity-date view it had before the detail pass.
+The fixture has such a pull request, theta, whose comment requests answer 403.
+`node scripts/check.mjs --fixture --reject "no reply yet, stale" --expect "replies could not be read"`
+failed before the change and passes after it. The other rows print as before.

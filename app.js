@@ -96,6 +96,8 @@ async function enrich(prs, token, user) {
         get(`repos/${p.repo}/pulls/${p.number}/reviews?per_page=100`),
       ])
       if (pull) { p.size = `+${pull.additions} -${pull.deletions}`; p.mergedBy = pull.merged_by?.login ?? null }
+      // A refused request (a rate limit, say) is not an empty thread, so nothing is said about replies.
+      if (!comments || !reviews) { p.unread = true; say(`${++done} of ${prs.length} pull requests read in detail`); continue }
       // Bots do not count as a reply; the CLA one has a plain user account, so it is named.
       const isBot = (c) => c.user?.type === "Bot" || /\[bot\]$|^CLAassistant$/i.test(c.user?.login ?? "")
       // GitHub logins ignore case, so "harianthk" typed in the box is still the author HarianthK.
@@ -129,6 +131,7 @@ function fullNote(p) {
   if (p.mergedBy) bits.push(`by ${p.mergedBy}`)
   else if (p.answered) bits.push(`${p.voices.slice(0, 2).join(" and ")} replied`)
   else if (p.answered === false && p.state === "open") bits.push("no reply yet")
+  else if (p.unread) bits.push("replies could not be read")
   if (p.turn) bits.push(`your turn: ${p.turn} wrote ${p.waiting === 0 ? "today" : p.waiting === 1 ? "yesterday" : `${p.waiting} days ago`}`)
   if (p.stale && p.waiting !== undefined) bits.push(`stale: nobody else has written in ${p.waiting} days`)
   else if (p.stale) bits.push(`stale: quiet for ${p.quiet} days`)
