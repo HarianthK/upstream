@@ -85,7 +85,8 @@ function describeIssue(issue) {
 // who merged it, and whether anyone other than the author has written on it.
 async function enrich(prs, token, user) {
   const headers = { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}` }
-  const get = async (path) => { const r = await fetch(`https://api.github.com/${path}`, { headers }); return r.ok ? r.json() : null }
+  // A dropped connection throws rather than answering; it is a failed read like any other, not the end of the pass.
+  const get = async (path) => { try { const r = await fetch(`https://api.github.com/${path}`, { headers }); return r.ok ? await r.json() : null } catch { return null } }
   let done = 0
   const queue = [...prs]
   const worker = async () => {

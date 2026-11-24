@@ -156,3 +156,15 @@ read" and keeps the plain activity-date view it had before the detail pass.
 The fixture has such a pull request, theta, whose comment requests answer 403.
 `node scripts/check.mjs --fixture --reject "no reply yet, stale" --expect "replies could not be read"`
 failed before the change and passes after it. The other rows print as before.
+
+## A dropped connection is a failed read too
+
+That fix covered a request GitHub answered with an error. A request that never
+got an answer at all, because the connection dropped, makes `fetch` throw
+instead, and the throw ran out of the detail pass: the status line turned into
+"Failed to fetch" and every pull request lost the detail already read for it.
+Now `get` turns a throw into `null`, the same as a refusal, so that one pull
+request says "replies could not be read" and the rest keep theirs. The fixture
+gained iota, whose comment and review requests throw. With `--expect "+5 -1"`
+added to the command above, the check failed before the change and passes
+after it.
