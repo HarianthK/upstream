@@ -26,7 +26,7 @@ export const fixture = (ago) => ({
     pr("owner/epsilon", 5, "Epsilon fix", ago(40), { comments: 1, updated_at: ago(25) }),
     pr("owner/theta", 10, "Theta fix", ago(20), { comments: 3, updated_at: ago(2) }),
     pr("owner/iota", 11, "Iota fix", ago(6), { comments: 1, updated_at: ago(1) }),
-    pr("owner/delta", 4, "Delta fix", ago(40), { state: "closed", closed_at: ago(38), updated_at: ago(38), pull_request: { merged_at: ago(38) } }),
+    pr("owner/delta", 4, "Delta fix", ago(40), { state: "closed", closed_at: ago(39), updated_at: ago(39), pull_request: { merged_at: ago(39) } }),
   ],
   "owner/alpha/1": { pull: { additions: 5, deletions: 1, merged_by: null }, comments: [said("HarianthK", ago(12)), said("mike", ago(10))] },
   "owner/beta/2": { pull: { additions: 7, deletions: 2, merged_by: null }, comments: [said("mike", ago(20)), said("HarianthK", ago(5))] },

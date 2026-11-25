@@ -168,3 +168,15 @@ request says "replies could not be read" and the rest keep theirs. The fixture
 gained iota, whose comment and review requests throw. With `--expect "+5 -1"`
 added to the command above, the check failed before the change and passes
 after it.
+
+## One day, one comment, one pull request
+
+Every count was printed with a plural noun, so a pull request merged the day
+after it was sent read "merged after 1 days", and someone with a single pull
+request upstream saw "1 pull requests" in the status line and the copied
+ledger. A small `plural()` now writes each count: days in every note, comments,
+pull requests, projects and issues.
+
+In the fixture, delta is now merged one day after it was sent.
+`node scripts/check.mjs --fixture --expect "merged after 1 day," --reject "1 days"`
+fails before and passes after.

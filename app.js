@@ -50,6 +50,8 @@ async function fetchAll(user, token, type = "pr") {
   return items
 }
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`
+
 function describe(pr) {
   const repo = pr.repository_url.replace("https://api.github.com/repos/", "")
   const sent = new Date(pr.created_at)
@@ -58,9 +60,9 @@ function describe(pr) {
   const state = merged ? "merged" : pr.state === "open" ? "open" : "closed"
   const days = (a, b) => Math.max(0, Math.round((b - a) / DAY))
   let note
-  if (merged) note = days(sent, merged) === 0 ? "merged the same day" : `merged after ${days(sent, merged)} days`
-  else if (closed) note = `closed without merging after ${days(sent, closed)} days`
-  else note = `open for ${days(sent, Date.now())} days, ${pr.comments} ${pr.comments === 1 ? "comment" : "comments"}`
+  if (merged) note = days(sent, merged) === 0 ? "merged the same day" : `merged after ${plural(days(sent, merged), "day")}`
+  else if (closed) note = `closed without merging after ${plural(days(sent, closed), "day")}`
+  else note = `open for ${plural(days(sent, Date.now()), "day")}, ${plural(pr.comments, "comment")}`
   if (pr.draft) note = `draft, ${note}`
   // Without a token the only clock is the last activity of any kind, the author's own included.
   const quiet = state === "open" ? days(new Date(pr.updated_at), Date.now()) : 0
@@ -72,12 +74,12 @@ function describeIssue(issue) {
   const repo = issue.repository_url.replace("https://api.github.com/repos/", "")
   const sent = new Date(issue.created_at), closed = issue.closed_at ? new Date(issue.closed_at) : null
   const days = (a, b) => Math.max(0, Math.round((b - a) / DAY))
-  const comments = `${issue.comments} ${issue.comments === 1 ? "comment" : "comments"}`
+  const comments = plural(issue.comments, "comment")
   let note
-  if (!closed) note = `open for ${days(sent, Date.now())} days, ${comments}`
-  else if (issue.state_reason === "not_planned") note = `closed as not planned after ${days(sent, closed)} days, ${comments}`
-  else if (issue.state_reason === "duplicate") note = `closed as a duplicate after ${days(sent, closed)} days`
-  else note = `closed as completed after ${days(sent, closed)} days, ${comments}`
+  if (!closed) note = `open for ${plural(days(sent, Date.now()), "day")}, ${comments}`
+  else if (issue.state_reason === "not_planned") note = `closed as not planned after ${plural(days(sent, closed), "day")}, ${comments}`
+  else if (issue.state_reason === "duplicate") note = `closed as a duplicate after ${plural(days(sent, closed), "day")}`
+  else note = `closed as completed after ${plural(days(sent, closed), "day")}, ${comments}`
   return { repo, title: issue.title, url: issue.html_url, number: issue.number, sent, state: closed ? "closed" : "open", note }
 }
 
@@ -98,7 +100,7 @@ async function enrich(prs, token, user) {
       ])
       if (pull) { p.size = `+${pull.additions} -${pull.deletions}`; p.mergedBy = pull.merged_by?.login ?? null }
       // A refused request (a rate limit, say) is not an empty thread, so nothing is said about replies.
-      if (!comments || !reviews) { p.unread = true; say(`${++done} of ${prs.length} pull requests read in detail`); continue }
+      if (!comments || !reviews) { p.unread = true; say(`${++done} of ${plural(prs.length, "pull request")} read in detail`); continue }
       // Bots do not count as a reply; the CLA one has a plain user account, so it is named.
       const isBot = (c) => c.user?.type === "Bot" || /\[bot\]$|^CLAassistant$/i.test(c.user?.login ?? "")
       // GitHub logins ignore case, so "harianthk" typed in the box is still the author HarianthK.
@@ -120,7 +122,7 @@ async function enrich(prs, token, user) {
         p.turn = newest && at(newest) > mine ? newest.user.login : null
         p.stale = !p.turn && p.waiting >= STALE_DAYS
       }
-      say(`${++done} of ${prs.length} pull requests read in detail`)
+      say(`${++done} of ${plural(prs.length, "pull request")} read in detail`)
     }
   }
   await Promise.all(Array.from({ length: 6 }, worker))
@@ -133,9 +135,9 @@ function fullNote(p) {
   else if (p.answered) bits.push(`${p.voices.slice(0, 2).join(" and ")} replied`)
   else if (p.answered === false && p.state === "open") bits.push("no reply yet")
   else if (p.unread) bits.push("replies could not be read")
-  if (p.turn) bits.push(`your turn: ${p.turn} wrote ${p.waiting === 0 ? "today" : p.waiting === 1 ? "yesterday" : `${p.waiting} days ago`}`)
-  if (p.stale && p.waiting !== undefined) bits.push(`stale: nobody else has written in ${p.waiting} days`)
-  else if (p.stale) bits.push(`stale: quiet for ${p.quiet} days`)
+  if (p.turn) bits.push(`your turn: ${p.turn} wrote ${p.waiting === 0 ? "today" : p.waiting === 1 ? "yesterday" : `${plural(p.waiting, "day")} ago`}`)
+  if (p.stale && p.waiting !== undefined) bits.push(`stale: nobody else has written in ${plural(p.waiting, "day")}`)
+  else if (p.stale) bits.push(`stale: quiet for ${plural(p.quiet, "day")}`)
   return bits.join(", ")
 }
 
@@ -145,7 +147,7 @@ function markdown(user, prs, issues) {
   const day = (d) => d.toISOString().slice(0, 10)
   const merged = prs.filter((p) => p.state === "merged").length
   const repos = [...new Set(prs.map((p) => p.repo))]
-  const lines = [`# Upstream: ${user}`, "", `${prs.length} pull requests sent to ${repos.length} projects, ${merged} merged, as of ${day(new Date())}.`]
+  const lines = [`# Upstream: ${user}`, "", `${plural(prs.length, "pull request")} sent to ${plural(repos.length, "project")}, ${merged} merged, as of ${day(new Date())}.`]
   const table = (head, what, rows) => ["", head, `| Sent | State | ${what} | Note |`, "| --- | --- | --- | --- |", ...rows]
   for (const repo of repos) {
     const items = prs.filter((p) => p.repo === repo)
@@ -223,8 +225,8 @@ function render(user, prs, issues) {
   }
   ledger = markdown(user, prs, issues)
   copy.hidden = !prs.length && !issues.length
-  const opened = issues.length ? ` and opened ${issues.length} ${issues.length === 1 ? "issue" : "issues"}` : ""
-  say(prs.length ? `${user} has sent ${prs.length} pull requests to ${byRepo.size} ${byRepo.size === 1 ? "project" : "projects"} they do not own${opened}.` : `${user} has not sent any pull requests to other people's projects${opened}.`)
+  const opened = issues.length ? ` and opened ${plural(issues.length, "issue")}` : ""
+  say(prs.length ? `${user} has sent ${plural(prs.length, "pull request")} to ${plural(byRepo.size, "project")} they do not own${opened}.` : `${user} has not sent any pull requests to other people's projects${opened}.`)
 }
 
 async function lookup(user) {
