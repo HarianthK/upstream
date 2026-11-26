@@ -41,6 +41,9 @@ function fakeFetch(data) {
   }
 }
 await new Promise((r) => setTimeout(r, 800))
+// A zone 12 hours off UTC, on the side where today's date differs from UTC's, so a UTC date shows.
+const zone = new Date().getUTCHours() < 12 ? "Etc/GMT+12" : "Etc/GMT-12"
+await send("Emulation.setTimezoneOverride", { timezoneId: zone })
 if (fixtureMode) {
   const { fixture } = await import("./fixtures/api.js")
   const data = fixture((days) => new Date(Date.now() - days * 86400000).toISOString())
@@ -63,7 +66,7 @@ if (flagged("--markdown").length) {
   const c = await send("Runtime.evaluate", { expression: `new Promise((done) => { navigator.clipboard.writeText = async (t) => done(t); document.getElementById("copy").click() })`, awaitPromise: true, returnByValue: true })
   const md = c.result.value ?? ""
   console.log(md)
-  const day = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10)
+  const day = (n) => new Date(Date.now() - n * 86400000).toLocaleDateString("en-CA", { timeZone: zone })
   for (const want of flagged("--markdown").map((t) => t.replace(/\{d:(\d+)\}/g, (_, n) => day(Number(n))))) {
     if (!md.split("\n").includes(want)) failed.push(`the markdown has no line "${want}"`)
   }

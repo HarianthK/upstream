@@ -180,3 +180,19 @@ pull requests, projects and issues.
 In the fixture, delta is now merged one day after it was sent.
 `node scripts/check.mjs --fixture --expect "merged after 1 day," --reject "1 days"`
 fails before and passes after.
+
+## Dates in the reader's own day
+
+The sent dates on the page and in the copied ledger, and the ledger's "as of"
+date, came from `toISOString()`, which is UTC. In Arizona that is seven hours
+ahead, so a pull request sent at six in the evening was listed under the next
+day, and the ledger copied that evening claimed tomorrow's date. GitHub shows
+dates in the reader's own zone. A small `localDay()` now builds the date from
+the local year, month and day, and all three places use it.
+
+`check.mjs` could not see this, because it ran in this machine's zone and
+compared against UTC dates of its own. It now sets the page to a zone twelve
+hours off UTC, picking the side where the date differs at that moment, and works
+out its `{d:N}` dates in the same zone.
+`node scripts/check.mjs --fixture --markdown "| {d:40} | merged | [#4 Delta fix](https://github.com/owner/delta/pull/4) | merged after 1 day, +9 -3, by dee |"`
+fails before and passes after.

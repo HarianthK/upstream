@@ -51,6 +51,8 @@ async function fetchAll(user, token, type = "pr") {
 }
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`
+// The reader's own calendar day; toISOString's is UTC's, a day ahead on an American evening.
+const localDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 
 function describe(pr) {
   const repo = pr.repository_url.replace("https://api.github.com/repos/", "")
@@ -144,7 +146,7 @@ function fullNote(p) {
 // The page as the markdown ledger it replaced: one table per project, then the issues.
 function markdown(user, prs, issues) {
   const cell = (s) => s.replace(/\|/g, "\\|")
-  const day = (d) => d.toISOString().slice(0, 10)
+  const day = localDay
   const merged = prs.filter((p) => p.state === "merged").length
   const repos = [...new Set(prs.map((p) => p.repo))]
   const lines = [`# Upstream: ${user}`, "", `${plural(prs.length, "pull request")} sent to ${plural(repos.length, "project")}, ${merged} merged, as of ${day(new Date())}.`]
@@ -207,7 +209,7 @@ function render(user, prs, issues) {
     const rows = items.map((p) => el("div", { class: p.turn ? "pr turn" : p.stale ? "pr stale" : "pr" },
       el("span", { class: `state ${p.state}`, text: p.state }),
       el("a", { class: "title", href: p.url, target: "_blank", rel: "noopener", text: `#${p.number} ${p.title}` }),
-      el("span", { class: "when", text: p.sent.toISOString().slice(0, 10) }),
+      el("span", { class: "when", text: localDay(p.sent) }),
       el("span", { class: "note", text: fullNote(p) }),
     ))
     return el("section", { class: "repo" }, head, ...rows)
@@ -218,7 +220,7 @@ function render(user, prs, issues) {
     const rows = issues.map((i) => el("div", { class: "pr issue" },
       el("span", { class: `state ${i.state}`, text: i.state }),
       el("a", { class: "title", href: i.url, target: "_blank", rel: "noopener", text: `${i.repo}#${i.number} ${i.title}` }),
-      el("span", { class: "when", text: i.sent.toISOString().slice(0, 10) }),
+      el("span", { class: "when", text: localDay(i.sent) }),
       el("span", { class: "note", text: i.note }),
     ))
     list.append(el("section", { class: "repo issues" }, head, ...rows))
